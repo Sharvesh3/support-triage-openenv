@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-triage-env"
+version = "0.1.0"
+description = "Support Triage environment for OpenEnv"
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core[core]>=0.2.2",
+    "openai>=1.0.0",
+]
+
+[project.scripts]
+server = "triage_env.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["triage_env", "triage_env.server"]
+package-dir = { "triage_env" = ".", "triage_env.server" = "server" }
