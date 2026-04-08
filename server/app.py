@@ -56,7 +56,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(port=args.port)
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the validator to call the server."""
     import uvicorn
-    # This matches the port we've been using (8004)
+    # Use the 'app' instance defined above in your file
     uvicorn.run(app, host="0.0.0.0", port=8004)
+
+if __name__ == "__main__":
+    main()
