@@ -369,6 +369,10 @@ class SupportTriageEnvironment(Environment):
     ) -> TriageObservation:
         if done:
             self._episode_done = True
+        
+       
+        safe_reward = max(0.01, min(0.99, float(reward)))
+
         return TriageObservation(
             task=self._task_name,
             ticket=self._current_ticket(),
@@ -376,8 +380,8 @@ class SupportTriageEnvironment(Environment):
             feedback=feedback,
             step_count=self._state.step_count,
             max_steps=int(self._task_cfg.get("max_steps", 6)),
-            done=done,        # goes into base Observation.done  → top-level in JSON
-            reward=reward,    # goes into base Observation.reward → top-level in JSON
+            done=done,
+            reward=safe_reward,  # Use the safe_reward here
         )
 
     @property
