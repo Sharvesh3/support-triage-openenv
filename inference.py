@@ -107,20 +107,15 @@ def get_action_dict(client: OpenAI, task: str, observation: dict, step: int) -> 
 async def run_episode(client: OpenAI, task: str) -> float:
     rewards: List[float] = []
     steps_taken = 0
-    score = 0.0
+    score = 0.001   # Default to safe non-zero value
     success = False
 
     log_start(task=task, env=BENCHMARK, model=MODEL_NAME)
-
     env = GenericEnvClient(base_url=SERVER_URL)
 
     try:
         async with env:
-            # reset and select task
             reset_result = await env.reset(task=task)
-
-            # GenericEnvClient.reset() returns a StepResult too
-            # observation is the nested dict (reward/done stripped from it)
             current_obs: dict = (
                 reset_result.observation
                 if hasattr(reset_result, "observation")
@@ -128,23 +123,15 @@ async def run_episode(client: OpenAI, task: str) -> float:
             )
 
             for step in range(1, MAX_STEPS + 1):
-                # Get action from LLM
                 action_dict = get_action_dict(client, task, current_obs, step)
                 action_str  = json.dumps(action_dict, separators=(",", ":"))
 
-                # Execute step
                 result = await env.step(GenericAction(**action_dict))
 
-                # ── THE FIX ──────────────────────────────────────────────────
-                # reward and done live on the StepResult dataclass,
-                # NOT inside result.observation (they are stripped from there
-                # by the openenv serializer before being sent to the client).
                 reward: float = float(result.reward or 0.0)
                 done:   bool  = bool(result.done)
-                # ─────────────────────────────────────────────────────────────
 
-                current_obs = result.observation  # dict for next LLM prompt
-
+                current_obs = result.observation
                 rewards.append(reward)
                 steps_taken = step
                 log_step(step=step, action=action_str, reward=reward, done=done, error=None)
@@ -152,14 +139,20 @@ async def run_episode(client: OpenAI, task: str) -> float:
                 if done:
                     break
 
-        # Normalise: max possible per-task reward is 0.8 (0.1 tool + 0.7 correct)
+        # --- THE FIX: Normalization and Clamping ---
         max_reward = 0.8
-        score = min(max(sum(rewards) / max_reward, 0.0), 1.0)
+        raw_score = sum(rewards) / max_reward if max_reward > 0 else 0.001
+        
+        # Clamp to strictly (0.001, 0.999) so we NEVER hit 0.0 or 1.0
+        score = max(0.001, min(0.999, raw_score))
         success = score >= 0.5
 
     except Exception as exc:
         print(f"[DEBUG] Episode error (task={task}): {exc}", flush=True)
+        score = 0.001  # Safe failure score
+        success = False
     finally:
+        # This is what the validator reads:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
     return score
