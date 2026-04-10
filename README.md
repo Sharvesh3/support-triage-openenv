@@ -1,4 +1,3 @@
-# 🚀 Support Triage Pro: An OpenEnv Agentic Benchmark
 
 # 🚀 Support Triage Pro: An OpenEnv Agentic Benchmark
 
