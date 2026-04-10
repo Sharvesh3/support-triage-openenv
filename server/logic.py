@@ -139,7 +139,7 @@ class SupportTriageEnvironment(Environment):
             ),
             tool_result=None,
             done=False,
-            reward=0.0,
+            reward=0.01,
         )
 
     # ── step ───────────────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ class SupportTriageEnvironment(Environment):
             return self._build_obs(
                 feedback="Episode already finished. Call reset() to start a new one.",
                 done=True,
-                reward=0.0,
+                reward=0.01,
             )
 
         self._state.step_count += 1
@@ -170,18 +170,12 @@ class SupportTriageEnvironment(Environment):
 
         # Force-terminate at max_steps ──────────────────────────────────────
         if not obs.done and self._state.step_count >= max_steps:
-            self._episode_done = True
-            return TriageObservation(
-                task=self._task_name,
-                ticket=self._current_ticket(),
-                tool_result=obs.tool_result,
-                feedback=(
-                    f"Maximum steps ({max_steps}) reached. Episode terminated."
-                ),
-                step_count=self._state.step_count,
-                max_steps=max_steps,
+            # CHANGE: Call self._build_obs instead of TriageObservation(...)
+            return self._build_obs(
+                feedback=f"Maximum steps ({max_steps}) reached. Episode terminated.",
                 done=True,
-                reward=float(obs.reward) if obs.reward is not None else 0.0,
+                reward=float(obs.reward) if obs.reward is not None else 0.01,
+                tool_result=obs.tool_result
             )
 
         return obs
