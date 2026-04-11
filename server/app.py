@@ -44,23 +44,11 @@ else:
     )
 
 
-def main(host: str = "0.0.0.0", port: int = 8004) -> None:
+def start_server():
+    """Helper to run the server locally for development."""
     import uvicorn
-    uvicorn.run(app, host=host, port=port)
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8004)
-    args = parser.parse_args()
-    main(port=args.port)
-
-def main():
-    """Entry point for the validator to call the server."""
-    import uvicorn
-    # Use the 'app' instance defined above in your file
+    # This matches the port used in your logic.py and inference.py
     uvicorn.run(app, host="0.0.0.0", port=8004)
 
 if __name__ == "__main__":
-    main()
+    start_server()
