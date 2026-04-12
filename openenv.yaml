@@ -3,4 +3,4 @@ name: triage_env
 type: space
 runtime: fastapi
 app: server.app:app
-port: 8004
+port: 7860

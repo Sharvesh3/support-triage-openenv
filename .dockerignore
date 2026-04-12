@@ -1,0 +1,15 @@
+# .dockerignore — exclude these from the Docker build context
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.git
+.gitignore
+.env
+uv.lock
+*.md
+.pytest_cache
+.mypy_cache
+dist/
+build/
