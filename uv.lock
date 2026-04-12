@@ -1492,16 +1492,24 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2f/22/38c339e370d198008f2c17ebdda1ae8f23bb4e1509dc7ae8eab6dc9b9cbe/openenv_core-0.2.3-py3-none-any.whl", hash = "sha256:f75a20c94452057a5f53a86e6d71a9f6a461524c3d6a865aa9344d257a92b795", size = 174557, upload-time = "2026-03-28T18:56:26.874Z" },
 ]
 
+[package.optional-dependencies]
+core = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "requests" },
+    { name = "uvicorn" },
+    { name = "websockets" },
+]
+
 [[package]]
 name = "openenv-triage-env"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
-    { name = "gradio" },
     { name = "httpx" },
     { name = "openai" },
-    { name = "openenv-core" },
+    { name = "openenv-core", extra = ["core"] },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1514,11 +1522,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110.0" },
-    { name = "gradio", specifier = ">=5.25.0,<6.0.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },
     { name = "openai", specifier = ">=1.0.0" },
-    { name = "openenv-core", specifier = ">=0.2.2" },
+    { name = "openenv-core", extras = ["core"], specifier = ">=0.2.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.29.0" },
 ]

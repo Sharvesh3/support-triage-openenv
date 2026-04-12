@@ -1,28 +1,20 @@
-"""
-server/app.py — FastAPI 'Master App' for Support Triage Pro.
-
-Route priority (defined BEFORE mount so they win over Gradio):
-  GET  /          → 200 {"status": "ok"}
-  GET  /health    → 200 {"status": "healthy"}
-  GET  /tasks     → ["auth_lockout", "db_timeout", "cascade_failure"]
-  POST /reset     → served by mounted env_app
-  POST /step      → served by mounted env_app
-  GET  /state     → served by mounted env_app
-  GET  /schema    → served by mounted env_app
-  WS   /ws        → served by mounted env_app
-  GET  /web       → Gradio playground (when ENABLE_WEB_INTERFACE=true)
-"""
-
 from __future__ import annotations
-
 import os
-from typing import List
+import sys
 
+# ---------------------------------------------------------------------------
+# Import guard
+# ---------------------------------------------------------------------------
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_HERE)
+for _p in (_HERE, _ROOT):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from typing import List
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-
 from openenv.core.env_server.http_server import create_app
-from openenv.core.env_server.web_interface import create_web_interface_app
 
 try:
     from .models import TriageAction, TriageObservation
@@ -34,7 +26,6 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Task registry
 # ---------------------------------------------------------------------------
-
 AVAILABLE_TASKS: List[str] = [
     "auth_lockout",
     "db_timeout",
@@ -42,54 +33,43 @@ AVAILABLE_TASKS: List[str] = [
 ]
 
 # ---------------------------------------------------------------------------
-# Build the OpenEnv sub-app
+# 1. Create the OpenEnv sub-app
 # ---------------------------------------------------------------------------
-
-_enable_web = os.environ.get("ENABLE_WEB_INTERFACE", "true").lower() in ("1", "true", "yes")
-
-if _enable_web:
-    _env_app = create_web_interface_app(
-        SupportTriageEnvironment,
-        TriageAction,
-        TriageObservation,
-        env_name="triage_env",
-        max_concurrent_envs=4,
-    )
-else:
-    _env_app = create_app(
-        SupportTriageEnvironment,
-        TriageAction,
-        TriageObservation,
-        max_concurrent_envs=4,
-    )
+_env_app = create_app(
+    SupportTriageEnvironment,
+    TriageAction,
+    TriageObservation,
+    max_concurrent_envs=4,
+)
 
 # ---------------------------------------------------------------------------
-# Master app  — our routes are registered FIRST so they beat Gradio redirects
+# 2. Master app instance
 # ---------------------------------------------------------------------------
+app = FastAPI(
+    title="Support Triage Pro",
+    version="1.0.0",
+)
 
-app = FastAPI(title="Support Triage Pro", version="1.0.0")
-
-
+# ---------------------------------------------------------------------------
+# 3. Define "Validator" routes FIRST (High Priority)
+# ---------------------------------------------------------------------------
 @app.get("/", tags=["Meta"])
 async def root() -> JSONResponse:
-    """Liveness root — Meta grader pings this."""
-    return JSONResponse({"status": "ok"})
-
+    """Root liveness — HF Space iframe and Meta grader ping."""
+    return JSONResponse(content={"status": "ok"})
 
 @app.get("/health", tags=["Meta"])
 async def health() -> JSONResponse:
-    """Health check — Docker HEALTHCHECK and HF Space monitor."""
-    return JSONResponse({"status": "healthy"})
-
+    """Docker HEALTHCHECK and HF Space monitor."""
+    return JSONResponse(content={"status": "healthy"})
 
 @app.get("/tasks", tags=["Environment Info"])
 async def list_tasks() -> JSONResponse:
-    """
-    Return available task names.
-    Required format: ["auth_lockout", "db_timeout", "cascade_failure"]
-    """
+    """Meta Phase 2 grader task enumeration."""
     return JSONResponse(content=AVAILABLE_TASKS)
 
-
-# Mount the full OpenEnv app last — it catches everything we haven't claimed.
+# ---------------------------------------------------------------------------
+# 4. Mount the OpenEnv app at the ROOT last (Catch-all)
+# This handles /reset, /step, /state, and critically, /ws WITHOUT rewriting.
+# ---------------------------------------------------------------------------
 app.mount("/", _env_app)
