@@ -1,17 +1,16 @@
 """
-server/app.py — FastAPI application for Support Triage Pro.
+server/app.py — FastAPI 'Master App' for Support Triage Pro.
 
-Auto-created endpoints (from openenv-core):
-  POST /reset    — start a new episode  (body: {"task": "auth_lockout|db_timeout|cascade_failure"})
-  POST /step     — execute an action
-  GET  /state    — current episode state
-  GET  /schema   — action / observation JSON schemas
-  GET  /health   — liveness check (returns {"status": "healthy"})
-  WS   /ws       — WebSocket persistent session
-  GET  /web      — Gradio web playground (when ENABLE_WEB_INTERFACE=true)
-
-Manually added endpoints:
-  GET  /tasks    — returns the list of available task names (required by Phase 2 grader)
+Route priority (defined BEFORE mount so they win over Gradio):
+  GET  /          → 200 {"status": "ok"}
+  GET  /health    → 200 {"status": "healthy"}
+  GET  /tasks     → ["auth_lockout", "db_timeout", "cascade_failure"]
+  POST /reset     → served by mounted env_app
+  POST /step      → served by mounted env_app
+  GET  /state     → served by mounted env_app
+  GET  /schema    → served by mounted env_app
+  WS   /ws        → served by mounted env_app
+  GET  /web       → Gradio playground (when ENABLE_WEB_INTERFACE=true)
 """
 
 from __future__ import annotations
@@ -33,7 +32,7 @@ except ImportError:
     from logic import SupportTriageEnvironment
 
 # ---------------------------------------------------------------------------
-# Task registry — single source of truth for task names
+# Task registry
 # ---------------------------------------------------------------------------
 
 AVAILABLE_TASKS: List[str] = [
@@ -43,13 +42,13 @@ AVAILABLE_TASKS: List[str] = [
 ]
 
 # ---------------------------------------------------------------------------
-# App creation
+# Build the OpenEnv sub-app
 # ---------------------------------------------------------------------------
 
 _enable_web = os.environ.get("ENABLE_WEB_INTERFACE", "true").lower() in ("1", "true", "yes")
 
 if _enable_web:
-    app = create_web_interface_app(
+    _env_app = create_web_interface_app(
         SupportTriageEnvironment,
         TriageAction,
         TriageObservation,
@@ -57,7 +56,7 @@ if _enable_web:
         max_concurrent_envs=4,
     )
 else:
-    app = create_app(
+    _env_app = create_app(
         SupportTriageEnvironment,
         TriageAction,
         TriageObservation,
@@ -65,48 +64,32 @@ else:
     )
 
 # ---------------------------------------------------------------------------
-# /tasks endpoint — Phase 2 grader requirement
-#
-# Must return a JSON list of task name strings. The grader uses this to
-# enumerate tasks, run each one, and verify scores fall in (0.0, 1.0).
+# Master app  — our routes are registered FIRST so they beat Gradio redirects
 # ---------------------------------------------------------------------------
 
+app = FastAPI(title="Support Triage Pro", version="1.0.0")
 
-@app.get(
-    "/tasks",
-    summary="List available tasks",
-    description=(
-        "Returns the list of task names this environment supports. "
-        "Each task name can be passed as the 'task' parameter in /reset."
-    ),
-    tags=["Environment Info"],
-)
+
+@app.get("/", tags=["Meta"])
+async def root() -> JSONResponse:
+    """Liveness root — Meta grader pings this."""
+    return JSONResponse({"status": "ok"})
+
+
+@app.get("/health", tags=["Meta"])
+async def health() -> JSONResponse:
+    """Health check — Docker HEALTHCHECK and HF Space monitor."""
+    return JSONResponse({"status": "healthy"})
+
+
+@app.get("/tasks", tags=["Environment Info"])
 async def list_tasks() -> JSONResponse:
     """
-    Return the available task names.
-
-    Response format (required by Meta grader):
-        ["auth_lockout", "db_timeout", "cascade_failure"]
+    Return available task names.
+    Required format: ["auth_lockout", "db_timeout", "cascade_failure"]
     """
     return JSONResponse(content=AVAILABLE_TASKS)
 
 
-# NOTE: /health is already registered by openenv-core's create_app /
-# create_web_interface_app. It returns {"status": "healthy"}.
-# Do NOT re-register it here — duplicate route registration raises an error.
-
-# ---------------------------------------------------------------------------
-# Development entry point
-# ---------------------------------------------------------------------------
-
-
-def main() -> None:
-    """Run the server locally for development. Uses PORT env var (default 7860)."""
-    import uvicorn
-
-    port = int(os.environ.get("PORT", 7860))
-    uvicorn.run("server.app:app", host="0.0.0.0", port=port, reload=False)
-
-
-if __name__ == "__main__":
-    main()
+# Mount the full OpenEnv app last — it catches everything we haven't claimed.
+app.mount("/", _env_app)
