@@ -73,3 +73,13 @@ async def list_tasks() -> JSONResponse:
 # This handles /reset, /step, /state, and critically, /ws WITHOUT rewriting.
 # ---------------------------------------------------------------------------
 app.mount("/", _env_app)
+
+
+def main():
+    """Standardized entry point for the OpenEnv validator."""
+    import uvicorn
+    # Note: we use the string "server.app:app" to support hot-reloading if needed
+    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
+
+if __name__ == "__main__":
+    main()
