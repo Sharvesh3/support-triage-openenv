@@ -7,7 +7,6 @@ __pycache__
 .git
 .gitignore
 .env
-uv.lock
 *.md
 .pytest_cache
 .mypy_cache
