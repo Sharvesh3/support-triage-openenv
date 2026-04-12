@@ -326,9 +326,9 @@ Results from the deterministic state-machine baseline agent in `inference.py` wi
 ============================================================
 All done. Scores: ['0.904', '0.904', '0.869']  Mean: 0.892
 
-</details>
-```
 
+```
+</details>
 ---
 
 ## Setup & Installation
