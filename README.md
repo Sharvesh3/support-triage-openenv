@@ -88,6 +88,7 @@ This task requires **two separate KB lookups** (`payment_service` and `downstrea
 ## Architecture
 
 ### 5-State Finite State Machine
+🔍 Deep Dive: View the core FSM and reward-shaping implementation in https://huggingface.co/spaces/sharvesh-33/support-triage-pro/blob/main/server/logic.py
 
 The environment enforces a strict linear protocol. Every action must declare an `intent` field; the FSM validates it against the current state before any reward is computed.
 
@@ -236,7 +237,7 @@ stateDiagram-v2
 
 ### Efficiency-Weighted Scoring Formula
 
-$$score = \max\!\left(0.001,\ \min\!\left(0.999,\ \frac{\sum R}{\text{MAX\_R}} \times 0.98^{steps}\right)\right)$$
+$$score = \max\left(0.001, \min\left(0.999, \frac{\sum R}{\text{MAX\_R}} \times 0.98^{\text{steps}}\right)\right)$$
 
 The step-decay factor `0.98^steps` rewards agents that solve tasks in fewer steps. A perfect 5-step `auth_lockout` run scores **~0.904**; the same reward total achieved in 10 steps scores **~0.817**.
 
@@ -303,6 +304,28 @@ Results from the deterministic state-machine baseline agent in `inference.py` wi
 | Random baseline | 0.001 | 0.001 | 0.001 | 0.001 | 0% |
 
 > **Note:** "Success" is defined as `score ≥ 0.5`. The baseline agent uses a deterministic state machine for routing and calls the LLM only for free-text payloads (diagnosis, proposed fix, resolution). Routing is never delegated to the LLM.
+
+### 📋 Validated Execution Logs
+<details>
+<summary>Click to view the 0.892 Mean Score "Golden Run" (Submission #12)</summary>
+
+```text
+2026-04-12 17:28:25,586 [INFO] inference — Starting task: auth_lockout
+[START] task=auth_lockout env=triage_env model=Qwen/Qwen2.5-72B-Instruct
+...
+[STEP] step=5 action={"intent":"resolve",...} reward=0.25 done=True error=null
+[END] success=true steps=5 score=0.904 rewards=0.10,0.25,0.10,0.25,0.25
+
+2026-04-12 17:28:48,942 [INFO] inference — Starting task: cascade_failure
+[START] task=cascade_failure env=triage_env model=Qwen/Qwen2.5-72B-Instruct
+...
+[STEP] step=4 action={"intent":"use_tool",...} reward=0.00 done=false error=service_busy
+[STEP] step=5 action={"intent":"use_tool",...} reward=0.10 done=false error=null
+[END] success=true steps=7 score=0.869 rewards=0.10,0.25,0.10,0.00,0.10,0.25,0.40
+
+============================================================
+All done. Scores: ['0.904', '0.904', '0.869']  Mean: 0.892
+</details>
 
 ---
 
