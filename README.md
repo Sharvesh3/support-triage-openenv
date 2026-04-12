@@ -237,7 +237,7 @@ stateDiagram-v2
 
 ### Efficiency-Weighted Scoring Formula
 
-$$score = \max\left(0.001, \min\left(0.999, \frac{\sum R}{\text{MAX\_R}} \times 0.98^{\text{steps}}\right)\right)$$
+$$\text{score} = \max\left(0.001, \min\left(0.999, \frac{\sum R}{MAX_{R}} \times 0.98^{\text{steps}}\right)\right)$$
 
 The step-decay factor `0.98^steps` rewards agents that solve tasks in fewer steps. A perfect 5-step `auth_lockout` run scores **~0.904**; the same reward total achieved in 10 steps scores **~0.817**.
 
@@ -325,7 +325,9 @@ Results from the deterministic state-machine baseline agent in `inference.py` wi
 
 ============================================================
 All done. Scores: ['0.904', '0.904', '0.869']  Mean: 0.892
+
 </details>
+```
 
 ---
 
