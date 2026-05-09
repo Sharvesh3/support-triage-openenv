@@ -1,19 +1,3 @@
----
-title: Support Triage Pro
-emoji: 🚨
-colorFrom: red
-colorTo: orange
-sdk: docker
-app_port: 7860
-base_path: /web
-pinned: true
-tags:
-  - openenv
-  - reinforcement-learning
-  - sre
-  - fsm
-  - benchmark
----
 
 # 🚨 Support Triage Pro
 
